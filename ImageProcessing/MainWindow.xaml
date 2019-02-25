@@ -5,8 +5,28 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ImageProcessing"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="613.983" Width="1108.565">
     <Grid>
-        
+        <Button Margin="10,10,947,541" Content="Select image" Click="FindImage" BorderBrush="#FF210303" Cursor="Hand">
+            <Button.Background>
+                <ImageBrush/>
+            </Button.Background>
+        </Button>
+        <Image Name="ProcessedImage" Margin="403,71,348,162" Width="350" Height="350" >
+            <Image.OpacityMask>
+                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                    <GradientStop Color="Black" Offset="0"/>
+                    <GradientStop Color="#FFB85A5A" Offset="1"/>
+                </LinearGradientBrush>
+            </Image.OpacityMask>
+        </Image>
+        <Image Name="NotProcessedImage" Margin="10,71,741,162" Height="350" Width="350" />
+        <Label Content="Height" HorizontalAlignment="Left" Margin="10,434,0,0" VerticalAlignment="Top" Width="65"/>
+        <Label Content="Width" HorizontalAlignment="Left" Margin="10,477,0,0" VerticalAlignment="Top" Width="65" RenderTransformOrigin="0.489,1.924"/>
+        <TextBlock Name="NotProcessedImageHeight" HorizontalAlignment="Left" Margin="80,439,0,0" TextWrapping="Wrap" Text="..." VerticalAlignment="Top"/>
+        <TextBlock Name="NotProcessedImageWidth" HorizontalAlignment="Left" Margin="80,482,0,0" TextWrapping="Wrap" Text="...." VerticalAlignment="Top"/>
+        <Label Content="Save to CSV TIME in secs" HorizontalAlignment="Left" Margin="149,434,0,0" VerticalAlignment="Top" Width="147"/>
+        <TextBlock Name="SaveToCsvTime" HorizontalAlignment="Left" Margin="155,469,0,0" TextWrapping="Wrap" Text="..." VerticalAlignment="Top" Width="36"/>
+
     </Grid>
 </Window>
