@@ -27,6 +27,7 @@
         <TextBlock Name="NotProcessedImageWidth" HorizontalAlignment="Left" Margin="80,482,0,0" TextWrapping="Wrap" Text="...." VerticalAlignment="Top"/>
         <Label Content="Save to CSV TIME in secs" HorizontalAlignment="Left" Margin="149,434,0,0" VerticalAlignment="Top" Width="147"/>
         <TextBlock Name="SaveToCsvTime" HorizontalAlignment="Left" Margin="155,469,0,0" TextWrapping="Wrap" Text="..." VerticalAlignment="Top" Width="36"/>
+        <TextBlock Name="CurrentState" HorizontalAlignment="Left" Margin="356,434,0,0" VerticalAlignment="Top" Width="147"/>
 
     </Grid>
 </Window>

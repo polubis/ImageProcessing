@@ -39,88 +39,90 @@ namespace ImageProcessing
                 bitmap.BeginInit();
                 bitmap.UriSource = new Uri(dlg.FileName);
                 bitmap.EndInit();
-                ReadImageAndWriteToCSV(bitmap.UriSource.OriginalString, bitmap.PixelWidth, bitmap.PixelHeight);
                 NotProcessedImage.Source = bitmap;
+                ManageProcessing(bitmap.UriSource.OriginalString, bitmap.PixelWidth, bitmap.PixelHeight);
             }
         }
 
-        private int ManagePixel(Dictionary<int, int> dictionary, int pixelValue)
+        private Dictionary<int, int> InitializeDictionary(int width, int height)
         {
-            if (dictionary.ContainsKey(pixelValue))
+            Dictionary<int, int> dictionary = new Dictionary<int, int>();
+
+            const int limit = 256;
+
+            for (int i = 0; i < limit; i++)
             {
-                return dictionary[pixelValue] + 1;
+                dictionary[i] = 0;
             }
-            else
-            {
-                return 1;
-            }
+
+            return dictionary;
         }
 
-        private async void ReadImageAndWriteToCSV(string path, int pixelWidth, int pixelHeight)
+        public void CreateShadesCsvWithoutTreads(string path, string headerLine = "X,Y,R,G,B,A")
         {
-            NotProcessedImageHeight.Text = pixelHeight.ToString() + "px";
-            NotProcessedImageWidth.Text = pixelWidth.ToString() + "px";
-
             Bitmap img = new Bitmap(path);
-            var content = new StringBuilder();
-            content.AppendLine("X,Y,R,G,B,A");
-
-            var countsContent = new StringBuilder();
-            countsContent.AppendLine("Colors counts");
-            countsContent.AppendLine("RKey, RCounts, GKey, GCounts, BKey, BCounts");
-
-            await Task.Run(() =>
+            var strBuilder = new StringBuilder();
+            strBuilder.AppendLine(headerLine);
+            var dictionaryShades = InitializeDictionary(img.Width, img.Height);
+        
+            for (int i = 0; i < img.Width; i++)
             {
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-                Dictionary<int, int> RCounts = new Dictionary<int, int>();
-                Dictionary<int, int> GCounts = new Dictionary<int, int>();
-                Dictionary<int, int> BCounts = new Dictionary<int, int>();
-
-                for (int i = 0; i < img.Width; i++)
+                for (int j = 0; j < img.Height; j++)
                 {
-                    for (int j = 0; j < img.Height; j++)
-                    {
-                        System.Drawing.Color pixel = img.GetPixel(i, j);
-                        content.AppendLine(String.Format("{0},{1},{2},{3},{4},{5}", i, j, pixel.R, pixel.G, pixel.B, pixel.A));
-                        RCounts[pixel.R] = ManagePixel(RCounts, pixel.R);
-                        GCounts[pixel.G] = ManagePixel(GCounts, pixel.G);
-                        BCounts[pixel.B] = ManagePixel(BCounts, pixel.B);
-                    }
+                    System.Drawing.Color pixel = img.GetPixel(i, j);
+                    strBuilder.AppendLine(String.Format("{0},{1},{2},{3},{4},{5}", i, j, pixel.R, pixel.G, pixel.B, pixel.A));
+                    dictionaryShades[pixel.R] = dictionaryShades[pixel.R] + 1;
                 }
+            }
 
-                for(int i = 0; i < RCounts.Count; i++)
-                {
-                    countsContent.AppendLine(String.Format("{0}, {1}, {2}, {3}, {4}, {5}", 
-                        RCounts.ElementAt(i).Key, RCounts.ElementAt(i).Value,
-                        GCounts.ElementAt(i).Key, GCounts.ElementAt(i).Value,
-                        BCounts.ElementAt(i).Key, BCounts.ElementAt(i).Value));
-                }
+            SaveCsv(path, strBuilder);
 
-                Dispatcher.Invoke(() =>
-                {
-                    sw.Stop();
-                    SaveToCsvTime.Text = sw.Elapsed.Seconds.ToString();
-                    // PixelGraph pixelGraph = new PixelGraph();
-                    // pixelGraph.Show();
-                });
-            });
+            var countsStrBuilder = new StringBuilder();
+            countsStrBuilder.AppendLine("RGBA COUNTS");
+            countsStrBuilder.AppendLine("Key, Value");
 
-            string pathToSave = Directory.GetParent(path).FullName + "\\data.csv";
-            string pathToSaveR = Directory.GetParent(path).FullName + "\\pixogramR.csv";
+            foreach (var el in dictionaryShades)
+            {
+                countsStrBuilder.AppendLine(String.Format("{0}, {1}", el.Key, el.Value));
+            }
+
+            SaveCsv(path, countsStrBuilder, "rgba.csv");
+        }
+
+        public void SaveCsv(string path, StringBuilder strBuilder, string fileName = "data.csv")
+        {
+            string pathToSave = Directory.GetParent(path).FullName + "\\" + fileName;
 
             if (File.Exists(pathToSave))
             {
                 File.Delete(pathToSave);
             }
 
-            if (File.Exists(pathToSaveR))
-            {
-                File.Delete(pathToSaveR);
-            }
+            File.AppendAllText(pathToSave, strBuilder.ToString());
+        }
 
-            File.AppendAllText(pathToSave, content.ToString());
-            File.AppendAllText(pathToSaveR, countsContent.ToString());
+        private async void ManageProcessing(string path, int pixelWidth, int pixelHeight)
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+
+            SaveToCsvTime.Text = "...";
+            NotProcessedImageHeight.Text = pixelHeight.ToString() + "px";
+            NotProcessedImageWidth.Text = pixelWidth.ToString() + "px";
+            CurrentState.Text = "is loading...";
+
+            await Task.Run(() =>
+            {
+                CreateShadesCsvWithoutTreads(path);
+
+                Dispatcher.Invoke(() =>
+                {
+                    sw.Stop();
+                    SaveToCsvTime.Text = sw.Elapsed.Seconds.ToString() + "s";
+                    CurrentState.Text = "finished!";
+                });
+            });
+            
         }
     }
 }
