@@ -19,9 +19,6 @@ using System.Diagnostics;
 
 namespace ImageProcessing
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         public MainWindow()
@@ -68,6 +65,10 @@ namespace ImageProcessing
             var content = new StringBuilder();
             content.AppendLine("X,Y,R,G,B,A");
 
+            var countsContent = new StringBuilder();
+            countsContent.AppendLine("Colors counts");
+            countsContent.AppendLine("RKey, RCounts, GKey, GCounts, BKey, BCounts");
+
             await Task.Run(() =>
             {
                 Stopwatch sw = new Stopwatch();
@@ -83,25 +84,43 @@ namespace ImageProcessing
                         System.Drawing.Color pixel = img.GetPixel(i, j);
                         content.AppendLine(String.Format("{0},{1},{2},{3},{4},{5}", i, j, pixel.R, pixel.G, pixel.B, pixel.A));
                         RCounts[pixel.R] = ManagePixel(RCounts, pixel.R);
-                        RCounts[pixel.G] = ManagePixel(GCounts, pixel.G);
-                        RCounts[pixel.B] = ManagePixel(BCounts, pixel.B);
+                        GCounts[pixel.G] = ManagePixel(GCounts, pixel.G);
+                        BCounts[pixel.B] = ManagePixel(BCounts, pixel.B);
                     }
                 }
+
+                for(int i = 0; i < RCounts.Count; i++)
+                {
+                    countsContent.AppendLine(String.Format("{0}, {1}, {2}, {3}, {4}, {5}", 
+                        RCounts.ElementAt(i).Key, RCounts.ElementAt(i).Value,
+                        GCounts.ElementAt(i).Key, GCounts.ElementAt(i).Value,
+                        BCounts.ElementAt(i).Key, BCounts.ElementAt(i).Value));
+                }
+
                 Dispatcher.Invoke(() =>
                 {
                     sw.Stop();
                     SaveToCsvTime.Text = sw.Elapsed.Seconds.ToString();
+                    // PixelGraph pixelGraph = new PixelGraph();
+                    // pixelGraph.Show();
                 });
             });
 
             string pathToSave = Directory.GetParent(path).FullName + "\\data.csv";
+            string pathToSaveR = Directory.GetParent(path).FullName + "\\pixogramR.csv";
 
             if (File.Exists(pathToSave))
             {
                 File.Delete(pathToSave);
             }
 
+            if (File.Exists(pathToSaveR))
+            {
+                File.Delete(pathToSaveR);
+            }
+
             File.AppendAllText(pathToSave, content.ToString());
+            File.AppendAllText(pathToSaveR, countsContent.ToString());
         }
     }
 }
