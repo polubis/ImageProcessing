@@ -12,6 +12,16 @@
                 <ImageBrush/>
             </Button.Background>
         </Button>
+        <Button Margin="159,10,798,541" Name="ProcessImageBtn" Content="Process image" Click="ProcessImage" BorderBrush="#FF210303" Cursor="Hand">
+            <Button.Background>
+                <ImageBrush/>
+            </Button.Background>
+        </Button>
+        <Button Margin="308,10,649,541" Content="Generate report" Click="GenerateReport" BorderBrush="#FF210303" Cursor="Hand">
+            <Button.Background>
+                <ImageBrush/>
+            </Button.Background>
+        </Button>
         <Image Name="ProcessedImage" Margin="403,71,348,162" Width="350" Height="350" >
             <Image.OpacityMask>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
@@ -27,8 +37,9 @@
         <TextBlock Name="NotProcessedImageWidth" HorizontalAlignment="Left" Margin="80,482,0,0" TextWrapping="Wrap" Text="...." VerticalAlignment="Top"/>
         <Label Content="Save to CSV TIME in secs" HorizontalAlignment="Left" Margin="149,434,0,0" VerticalAlignment="Top" Width="147"/>
         <TextBlock Name="SaveToCsvTime" HorizontalAlignment="Left" Margin="155,469,0,0" TextWrapping="Wrap" Text="..." VerticalAlignment="Top" Width="36"/>
-        <TextBlock Name="CurrentState" HorizontalAlignment="Left" Margin="356,434,0,0" VerticalAlignment="Top" Width="147"/>
-        <TextBox Name="ThreadsNumber" HorizontalAlignment="Left" Height="48" Margin="529,455,0,0" TextWrapping="Wrap" Text="Type threads number" VerticalAlignment="Top" Width="169" />
+        <TextBlock Name="CurrentState" HorizontalAlignment="Left" Margin="356,434,0,0" VerticalAlignment="Top"/>
+        <TextBox Name="ThreadsNumber" HorizontalAlignment="Left" Height="48" Margin="529,455,0,0" TextWrapping="Wrap" Text="1" VerticalAlignment="Top" Width="169" />
+        <Label Content="threads" HorizontalAlignment="Left" Margin="452,455,0,0" VerticalAlignment="Top" Width="65"/>
 
     </Grid>
 </Window>

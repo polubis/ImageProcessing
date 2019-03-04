@@ -21,9 +21,36 @@ namespace ImageProcessing
 {
     public partial class MainWindow : Window
     {
+        BitmapImage image = new BitmapImage();
+        string lastSavedImageTime;
+
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        private void ProcessImage(object sender, RoutedEventArgs e)
+        {
+            if (NotProcessedImage.Source != null)
+            {
+                ManageProcessing(image.UriSource.OriginalString);
+            }
+
+        }
+
+        public void GenerateReport(object sender, RoutedEventArgs e)
+        {
+            if (NotProcessedImage.Source != null)
+            {
+                string stringDate = DateTime.Now.ToString("MM/dd/yyyy h:mm tt");
+                string path = Directory.GetParent(image.UriSource.OriginalString).FullName + "\\" + "Report_from_" + stringDate.Replace(':', '_').Replace('/', '_');
+
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+            }
+
         }
 
         private void FindImage(object sender, RoutedEventArgs e)
@@ -31,76 +58,29 @@ namespace ImageProcessing
             OpenFileDialog dlg = new OpenFileDialog();
             dlg.InitialDirectory = "c:\\";
             dlg.Filter = "Image files (*.jpg)|*.jpg|All Files (*.*)|*.*";
-            dlg.RestoreDirectory = true;
+            dlg.RestoreDirectory = false;
 
             if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
-                BitmapImage bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.UriSource = new Uri(dlg.FileName);
-                bitmap.EndInit();
-                NotProcessedImage.Source = bitmap;
-                ManageProcessing(bitmap.UriSource.OriginalString, bitmap.PixelWidth, bitmap.PixelHeight);
+                image.BeginInit();
+                image.UriSource = new Uri(dlg.FileName);
+                image.EndInit();
+                NotProcessedImageHeight.Text = image.PixelHeight.ToString() + "px";
+                NotProcessedImageWidth.Text = image.PixelWidth.ToString() + "px";
+                NotProcessedImage.Source = image;
             }
         }
-
-        private Dictionary<int, int> InitializeDictionary(int width, int height)
-        {
-            Dictionary<int, int> dictionary = new Dictionary<int, int>();
-
-            const int limit = 256;
-
-            for (int i = 0; i < limit; i++)
-            {
-                dictionary[i] = 0;
-            }
-
-            return dictionary;
-        }
-
-        public void CreateShadesCsvWithoutThreads(string path, string headerLine = "X,Y,R,G,B,A")
-        {
-            Bitmap img = new Bitmap(path);
-            var strBuilder = new StringBuilder();
-            strBuilder.AppendLine(headerLine);
-            var rShades = InitializeDictionary(img.Width, img.Height);
-            var gShades = InitializeDictionary(img.Width, img.Height);
-            var bShades = InitializeDictionary(img.Width, img.Height);
-
-            for (int i = 0; i < img.Width; i++)
-            {
-                for (int j = 0; j < img.Height; j++)
-                {
-                    System.Drawing.Color pixel = img.GetPixel(i, j);
-                    strBuilder.AppendLine(String.Format("{0},{1},{2},{3},{4},{5}", i, j, pixel.R, pixel.G, pixel.B, pixel.A));
-                    rShades[pixel.R] = rShades[pixel.R] + 1;
-                    gShades[pixel.G] = gShades[pixel.G] + 1;
-                    bShades[pixel.B] = bShades[pixel.B] + 1;
-                }
-            }
-
-            SaveCsv(path, strBuilder);
-
-            var countsStrBuilder = new StringBuilder();
-            countsStrBuilder.AppendLine("RGB COUNTS");
-            countsStrBuilder.AppendLine("RCounts, Value");
-            PrintShades(rShades, countsStrBuilder);
-            countsStrBuilder.AppendLine("GCounts, Value");
-            PrintShades(gShades, countsStrBuilder);
-            countsStrBuilder.AppendLine("BCounts, Value");
-            PrintShades(bShades, countsStrBuilder);
-
-            SaveCsv(path, countsStrBuilder, "rgba.csv");
-        }
-
         public void CreateShadesWithMultipleThreads(string path, int threadsNumber, string headerLine = "X,Y,R,G,B,A")
         {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+
             Bitmap img = new Bitmap(path);
             var strBuilder = new StringBuilder();
             strBuilder.AppendLine(headerLine);
-            var rShades = InitializeDictionary(img.Width, img.Height);
-            var gShades = InitializeDictionary(img.Width, img.Height);
-            var bShades = InitializeDictionary(img.Width, img.Height);
+            var r = new Shade("R color shades", img.Width, img.Height);
+            var g = new Shade("G color shades", img.Width, img.Height);
+            var b = new Shade("B color shades", img.Width, img.Height);
 
             int widthJump = img.Width / threadsNumber;
             int heightJump = img.Height / threadsNumber;
@@ -145,9 +125,9 @@ namespace ImageProcessing
                         {
                             System.Drawing.Color pixel = clonedImage.GetPixel(i, j);
                             strBuilder.AppendLine(String.Format("{0},{1},{2},{3},{4},{5}", i, j, pixel.R, pixel.G, pixel.B, pixel.A));
-                            rShades[pixel.R] = rShades[pixel.R] + 1;
-                            gShades[pixel.G] = gShades[pixel.G] + 1;
-                            bShades[pixel.B] = bShades[pixel.B] + 1;
+                            r.Shades[pixel.R] = r.Shades[pixel.R] + 1;
+                            g.Shades[pixel.G] = g.Shades[pixel.G] + 1;
+                            b.Shades[pixel.B] = b.Shades[pixel.B] + 1;
                         }
                     }
                 });
@@ -157,11 +137,16 @@ namespace ImageProcessing
             var countsStrBuilder = new StringBuilder();
             countsStrBuilder.AppendLine("RGB COUNTS");
             countsStrBuilder.AppendLine("RCounts, Value");
-            PrintShades(rShades, countsStrBuilder);
+            PrintShades(r.Shades, countsStrBuilder);
             countsStrBuilder.AppendLine("GCounts, Value");
-            PrintShades(gShades, countsStrBuilder);
+            PrintShades(g.Shades, countsStrBuilder);
             countsStrBuilder.AppendLine("BCounts, Value");
-            PrintShades(bShades, countsStrBuilder);
+            PrintShades(b.Shades, countsStrBuilder);
+
+            sw.Stop();
+            countsStrBuilder.AppendLine("Total time, Number of threads");
+            countsStrBuilder.AppendLine(String.Format("{0}, {1}", sw.Elapsed + "s", threadsNumber.ToString()));
+            lastSavedImageTime = sw.Elapsed.ToString();
 
             SaveCsv(path, countsStrBuilder, "rgba.csv");
         }
@@ -186,14 +171,9 @@ namespace ImageProcessing
             File.AppendAllText(pathToSave, strBuilder.ToString());
         }
 
-        private async void ManageProcessing(string path, int pixelWidth, int pixelHeight)
+        private async void ManageProcessing(string path)
         {
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-
             SaveToCsvTime.Text = "...";
-            NotProcessedImageHeight.Text = pixelHeight.ToString() + "px";
-            NotProcessedImageWidth.Text = pixelWidth.ToString() + "px";
             CurrentState.Text = "is loading...";
 
             string threadsNumberText = ThreadsNumber.Text;
@@ -207,15 +187,12 @@ namespace ImageProcessing
                 }
                 else
                 {
-                    CreateShadesCsvWithoutThreads(path);
+                    CreateShadesWithMultipleThreads(path, 1);
                 }
-
 
                 Dispatcher.Invoke(() =>
                 {
-                    sw.Stop();
-                    SaveToCsvTime.Text = sw.Elapsed.Seconds.ToString() + "s";
-                    CurrentState.Text = "finished!";
+                    CurrentState.Text = "finished in " + lastSavedImageTime;
                 });
             });
             
