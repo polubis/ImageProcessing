@@ -16,12 +16,13 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.IO;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace ImageProcessing
 {
     public partial class MainWindow : Window
     {
-        BitmapImage image = new BitmapImage();
+        BitmapImage image;
         string lastSavedImageTime;
 
         public MainWindow()
@@ -64,6 +65,25 @@ namespace ImageProcessing
             }
         }
 
+        private async void CountFromCsvFile(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog dlg = new OpenFileDialog();
+            dlg.InitialDirectory = "c:\\";
+            dlg.RestoreDirectory = false;
+            dlg.Filter = "Text files (*.csv)|*.csv";
+
+            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                SaveToCsvTime.Text = "...";
+                CurrentState.Text = "reading pixel csv...";
+
+                var sr = new StreamReader(dlg.FileName);
+                string content = await sr.ReadToEndAsync();
+
+                CurrentState.Text = "pixel csv readed";
+            }
+        }
+
         private void FindImage(object sender, RoutedEventArgs e)
         {
             OpenFileDialog dlg = new OpenFileDialog();
@@ -73,6 +93,7 @@ namespace ImageProcessing
 
             if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
+                image = new BitmapImage();
                 image.BeginInit();
                 image.UriSource = new Uri(dlg.FileName);
                 image.EndInit();
@@ -89,7 +110,7 @@ namespace ImageProcessing
             Bitmap img = new Bitmap(path);
             var strBuilder = new StringBuilder();
             strBuilder.AppendLine(headerLine);
-            Dictionary<string, int> shades = new Dictionary<string, int>();
+            ConcurrentDictionary<string, int> shades = new ConcurrentDictionary<string, int>();
 
             int widthJump = img.Width / threadsNumber;
             int heightJump = img.Height / threadsNumber;
@@ -176,7 +197,7 @@ namespace ImageProcessing
 
         }
 
-        public void PrintShades(Dictionary<string, int> shades, StringBuilder stringBuilder)
+        public void PrintShades(ConcurrentDictionary<string, int> shades, StringBuilder stringBuilder)
         {
             foreach (var el in shades)
             {

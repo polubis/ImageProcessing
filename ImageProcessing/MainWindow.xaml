@@ -40,6 +40,11 @@
         <TextBlock Name="CurrentState" HorizontalAlignment="Left" Margin="356,434,0,0" VerticalAlignment="Top"/>
         <TextBox Name="ThreadsNumber" HorizontalAlignment="Left" Height="48" Margin="529,455,0,0" TextWrapping="Wrap" Text="1" VerticalAlignment="Top" Width="169" />
         <Label Content="threads" HorizontalAlignment="Left" Margin="452,455,0,0" VerticalAlignment="Top" Width="65"/>
+        <Button Margin="457,10,500,541" Content="Count from CSV FIle" Click="CountFromCsvFile" BorderBrush="#FF210303" Cursor="Hand">
+            <Button.Background>
+                <ImageBrush/>
+            </Button.Background>
+        </Button>
 
     </Grid>
 </Window>
