@@ -35,13 +35,15 @@ namespace ImageProcessing
             {
                 ManageProcessing(image.UriSource.OriginalString);
             }
-
         }
 
         public void GenerateReport(object sender, RoutedEventArgs e)
         {
             if (NotProcessedImage.Source != null)
             {
+                SaveToCsvTime.Text = "...";
+                CurrentState.Text = "generating report it can be while..";
+
                 string stringDate = DateTime.Now.ToString("MM/dd/yyyy h:mm tt");
                 string path = Directory.GetParent(image.UriSource.OriginalString).FullName + "\\" + "Report_from_" + stringDate.Replace(':', '_').Replace('/', '_');
 
@@ -49,8 +51,17 @@ namespace ImageProcessing
                 {
                     Directory.CreateDirectory(path);
                 }
-            }
 
+                int threadsLimit = 20;
+                // Dokonczyc tutaj
+                for (int i = 0; i < threadsLimit; i++)
+                {
+                    string pathToThreadFolder = path + "\\" + (i + 1) + "threads";
+                    Directory.CreateDirectory(pathToThreadFolder);
+                    CreateShadesWithMultipleThreads(image.UriSource.OriginalString, i + 1, pathToThreadFolder);
+                }
+                CurrentState.Text = "finished in " + lastSavedImageTime;
+            }
         }
 
         private void FindImage(object sender, RoutedEventArgs e)
@@ -70,7 +81,7 @@ namespace ImageProcessing
                 NotProcessedImage.Source = image;
             }
         }
-        public void CreateShadesWithMultipleThreads(string path, int threadsNumber, string headerLine = "X,Y,R,G,B,A")
+        public void CreateShadesWithMultipleThreads(string path, int threadsNumber, string pathToSaveData, string headerLine = "X,Y,R,G,B,A")
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -78,9 +89,7 @@ namespace ImageProcessing
             Bitmap img = new Bitmap(path);
             var strBuilder = new StringBuilder();
             strBuilder.AppendLine(headerLine);
-            var r = new Shade("R color shades", img.Width, img.Height);
-            var g = new Shade("G color shades", img.Width, img.Height);
-            var b = new Shade("B color shades", img.Width, img.Height);
+            Dictionary<string, int> shades = new Dictionary<string, int>();
 
             int widthJump = img.Width / threadsNumber;
             int heightJump = img.Height / threadsNumber;
@@ -109,7 +118,6 @@ namespace ImageProcessing
                 heightBreakpoints[threadsNumber] = heightBreakpoints[threadsNumber] + moduloHeight;
             }
 
-
             Parallel.For(0, threadsNumber,
                 index =>
                 {
@@ -125,33 +133,50 @@ namespace ImageProcessing
                         {
                             System.Drawing.Color pixel = clonedImage.GetPixel(i, j);
                             strBuilder.AppendLine(String.Format("{0},{1},{2},{3},{4},{5}", i, j, pixel.R, pixel.G, pixel.B, pixel.A));
-                            r.Shades[pixel.R] = r.Shades[pixel.R] + 1;
-                            g.Shades[pixel.G] = g.Shades[pixel.G] + 1;
-                            b.Shades[pixel.B] = b.Shades[pixel.B] + 1;
+                            string color = pixel.R.ToString() + "," + pixel.G.ToString() + "," + pixel.B.ToString();
+                            if (shades.ContainsKey(color))
+                            {
+                                shades[color] = shades[color] + 1;
+                            }
+                            else
+                            {
+                                shades[color] = 1;
+                            }
                         }
                     }
                 });
 
-            SaveCsv(path, strBuilder);
+            if (pathToSaveData != null)
+            {
+                SaveCsv(pathToSaveData, strBuilder);
+            }
+            else
+            {
+                SaveCsv(path, strBuilder);
+            }
 
             var countsStrBuilder = new StringBuilder();
             countsStrBuilder.AppendLine("RGB COUNTS");
-            countsStrBuilder.AppendLine("RCounts, Value");
-            PrintShades(r.Shades, countsStrBuilder);
-            countsStrBuilder.AppendLine("GCounts, Value");
-            PrintShades(g.Shades, countsStrBuilder);
-            countsStrBuilder.AppendLine("BCounts, Value");
-            PrintShades(b.Shades, countsStrBuilder);
+            countsStrBuilder.AppendLine("R, G, B, Counts");
+            PrintShades(shades, countsStrBuilder);
 
             sw.Stop();
             countsStrBuilder.AppendLine("Total time, Number of threads");
             countsStrBuilder.AppendLine(String.Format("{0}, {1}", sw.Elapsed + "s", threadsNumber.ToString()));
             lastSavedImageTime = sw.Elapsed.ToString();
 
-            SaveCsv(path, countsStrBuilder, "rgba.csv");
+            if (pathToSaveData != null)
+            {
+                SaveCsv(pathToSaveData, countsStrBuilder, "rgba.csv");
+            }
+            else
+            {
+                SaveCsv(path, countsStrBuilder, "rgba.csv");
+            }
+
         }
 
-        public void PrintShades(Dictionary<int, int> shades, StringBuilder stringBuilder)
+        public void PrintShades(Dictionary<string, int> shades, StringBuilder stringBuilder)
         {
             foreach (var el in shades)
             {
@@ -183,11 +208,11 @@ namespace ImageProcessing
                 int threadsNumber;
                 if (int.TryParse(threadsNumberText, out threadsNumber))
                 {
-                    CreateShadesWithMultipleThreads(path, threadsNumber);
+                    CreateShadesWithMultipleThreads(path, threadsNumber, null);
                 }
                 else
                 {
-                    CreateShadesWithMultipleThreads(path, 1);
+                    CreateShadesWithMultipleThreads(path, 1, null);
                 }
 
                 Dispatcher.Invoke(() =>
