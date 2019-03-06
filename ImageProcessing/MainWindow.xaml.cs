@@ -38,13 +38,12 @@ namespace ImageProcessing
             }
         }
 
-        public void GenerateReport(object sender, RoutedEventArgs e)
+        public async void GenerateReport(object sender, RoutedEventArgs e)
         {
             if (NotProcessedImage.Source != null)
             {
                 SaveToCsvTime.Text = "...";
                 CurrentState.Text = "generating report it can be while..";
-
                 string stringDate = DateTime.Now.ToString("MM/dd/yyyy h:mm tt");
                 string path = Directory.GetParent(image.UriSource.OriginalString).FullName + "\\" + "Report_from_" + stringDate.Replace(':', '_').Replace('/', '_');
 
@@ -54,15 +53,31 @@ namespace ImageProcessing
                 }
 
                 int threadsLimit = 20;
-                // Dokonczyc tutaj
+                await HandleGeneratingReport(threadsLimit, path);
+            }
+        }
+
+        private async Task HandleGeneratingReport(int threadsLimit, string path)
+        {
+            await Task.Run(() =>
+            {
                 for (int i = 0; i < threadsLimit; i++)
                 {
-                    string pathToThreadFolder = path + "\\" + (i + 1) + "threads";
+                    string originalString = "";
+                    Dispatcher.Invoke(() =>
+                    {
+                        originalString = image.UriSource.OriginalString;
+                    });
+
+                    string pathToThreadFolder = path + "\\" + (i + 1) + "threads" + "\\";
                     Directory.CreateDirectory(pathToThreadFolder);
-                    CreateShadesWithMultipleThreads(image.UriSource.OriginalString, i + 1, pathToThreadFolder);
+                    CreateShadesWithMultipleThreads(originalString, i + 1, pathToThreadFolder);
                 }
-                CurrentState.Text = "finished in " + lastSavedImageTime;
-            }
+                Dispatcher.Invoke(() =>
+                {
+                    CurrentState.Text = "finished in " + lastSavedImageTime;
+                });
+            });
         }
 
         private async void CountFromCsvFile(object sender, RoutedEventArgs e)
