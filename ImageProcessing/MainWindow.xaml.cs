@@ -115,6 +115,7 @@ namespace ImageProcessing
                 NotProcessedImageHeight.Text = image.PixelHeight.ToString() + "px";
                 NotProcessedImageWidth.Text = image.PixelWidth.ToString() + "px";
                 NotProcessedImage.Source = image;
+                ManageProcessing(image.UriSource.OriginalString);
             }
         }
         public void CreateShadesWithMultipleThreads(string path, int threadsNumber, string pathToSaveData, string headerLine = "X,Y,R,G,B,A")
@@ -250,7 +251,7 @@ namespace ImageProcessing
             SaveToCsvTime.Text = "...";
             CurrentState.Text = "in progress...";
 
-            string threadsNumberText = 2.ToString();
+            string threadsNumberText = 4.ToString();
 
             await Task.Run(() =>
             {
