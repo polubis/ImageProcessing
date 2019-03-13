@@ -154,10 +154,11 @@ namespace ImageProcessing
                 heightBreakpoints[threadsNumber] = heightBreakpoints[threadsNumber] + moduloHeight;
             }
 
+
             Parallel.For(0, threadsNumber,
                 index =>
                 {
-                    Bitmap clonedImage = (Bitmap)img.Clone();
+                    
                     int widthStartIndex = widthBreakpoints[index];
                     int heightStartIndex = heightBreakpoints[index];
                     int widthLimit = widthBreakpoints[index+1];
@@ -167,12 +168,24 @@ namespace ImageProcessing
                     {
                         for (int j = heightStartIndex; j < heightLimit; j++)
                         {
-                            System.Drawing.Color pixel = clonedImage.GetPixel(i, j);
-                            strBuilder.AppendLine(String.Format("{0},{1},{2},{3},{4},{5}", i, j, pixel.R, pixel.G, pixel.B, pixel.A));
-                            string color = pixel.R.ToString() + "," + pixel.G.ToString() + "," + pixel.B.ToString();
+                            System.Drawing.Color pixel;
+                            lock (img)
+                            {
+                                pixel = img.GetPixel(i, j);
+                            }
+
+                            strBuilder.Append(i);
+                            strBuilder.Append(j);
+                            strBuilder.Append(pixel.R.ToString());
+                            strBuilder.Append(pixel.G.ToString());
+                            strBuilder.Append(pixel.B.ToString());
+                            strBuilder.Append(pixel.A.ToString());
+                            strBuilder.AppendLine();
+
+                            string color = $"{pixel.R.ToString()}, {pixel.G.ToString()}, {pixel.B.ToString()}";
                             if (shades.ContainsKey(color))
                             {
-                                shades[color] = shades[color] + 1;
+                                shades[color]++; 
                             }
                             else
                             {
