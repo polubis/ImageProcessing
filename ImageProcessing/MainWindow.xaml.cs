@@ -248,9 +248,9 @@ namespace ImageProcessing
         private async void ManageProcessing(string path)
         {
             SaveToCsvTime.Text = "...";
-            CurrentState.Text = "is loading...";
+            CurrentState.Text = "in progress...";
 
-            string threadsNumberText = ThreadsNumber.Text;
+            string threadsNumberText = 2.ToString();
 
             await Task.Run(() =>
             {
