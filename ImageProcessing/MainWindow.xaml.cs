@@ -22,8 +22,9 @@ namespace ImageProcessing
 {
     public partial class MainWindow : Window
     {
-        BitmapImage image;
-        string lastSavedImageTime;
+        private BitmapImage _image;
+        private string _time;
+        public const int ThreadsNumber = 10;
 
         public MainWindow()
         {
@@ -32,113 +33,124 @@ namespace ImageProcessing
 
         private void ProcessImage(object sender, RoutedEventArgs e)
         {
-            if (NotProcessedImage.Source != null)
+            if (Image.Source != null)
             {
-                ManageProcessing(image.UriSource.OriginalString);
+                ManageProcessing(_image.UriSource.OriginalString);
             }
         }
 
         public async void GenerateReport(object sender, RoutedEventArgs e)
         {
-            if (NotProcessedImage.Source != null)
+            var stringDate = DateTime.Now.ToString("MM/dd/yyyy h:mm tt");
+            if (Image.Source == null) return;
+            //SaveToCsvTime.Text = "...";
+            CurrentState.Text = "generating report it can be while..";
+            var path = Directory.GetParent(_image.UriSource.OriginalString).FullName + "\\" + "Report_from_" + stringDate.Replace(':', '_').Replace('/', '_');
+
+            if (!Directory.Exists(path))
             {
-                SaveToCsvTime.Text = "...";
-                CurrentState.Text = "generating report it can be while..";
-                string stringDate = DateTime.Now.ToString("MM/dd/yyyy h:mm tt");
-                string path = Directory.GetParent(image.UriSource.OriginalString).FullName + "\\" + "Report_from_" + stringDate.Replace(':', '_').Replace('/', '_');
-
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-
-                int threadsLimit = 20;
-                await HandleGeneratingReport(threadsLimit, path);
+                Directory.CreateDirectory(path);
             }
+
+            const int threadsLimit = 20;
+            await HandleGeneratingReport(threadsLimit, path);
         }
 
         private async Task HandleGeneratingReport(int threadsLimit, string path)
         {
             await Task.Run(() =>
             {
-                for (int i = 0; i < threadsLimit; i++)
+                for (var i = 0; i < threadsLimit; i++)
                 {
-                    string originalString = "";
+                    var originalString = "";
                     Dispatcher.Invoke(() =>
                     {
-                        originalString = image.UriSource.OriginalString;
+                        originalString = _image.UriSource.OriginalString;
                     });
 
-                    string pathToThreadFolder = path + "\\" + (i + 1) + "threads" + "\\";
+                    var pathToThreadFolder = path + "\\" + (i + 1) + "threads" + "\\";
                     Directory.CreateDirectory(pathToThreadFolder);
                     CreateShadesWithMultipleThreads(originalString, i + 1, pathToThreadFolder);
                 }
                 Dispatcher.Invoke(() =>
                 {
-                    CurrentState.Text = "finished in " + lastSavedImageTime;
+                    CurrentState.Text = "finished in " + _time;
                 });
             });
         }
 
         private async void CountFromCsvFile(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog dlg = new OpenFileDialog();
-            dlg.InitialDirectory = "c:\\";
-            dlg.RestoreDirectory = false;
-            dlg.Filter = "Text files (*.csv)|*.csv";
-
-            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            var dlg = new OpenFileDialog
             {
-                SaveToCsvTime.Text = "...";
-                CurrentState.Text = "reading pixel csv...";
+                InitialDirectory = "c:\\", RestoreDirectory = false, Filter = @"Text files (*.csv)|*.csv"
+            };
 
-                var sr = new StreamReader(dlg.FileName);
-                string content = await sr.ReadToEndAsync();
+            if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
 
-                CurrentState.Text = "pixel csv readed";
-            }
+            //SaveToCsvTime.Text = "...";
+            CurrentState.Text = "reading pixel csv...";
+
+            var sr = new StreamReader(dlg.FileName);
+            var content = await sr.ReadToEndAsync();
+
+            CurrentState.Text = "pixel csv";
+
         }
 
-        private void FindImage(object sender, RoutedEventArgs e)
+        private void ChooseImage(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog dlg = new OpenFileDialog();
-            dlg.InitialDirectory = "c:\\";
-            dlg.Filter = "Image files (*.jpg)|*.jpg|All Files (*.*)|*.*";
-            dlg.RestoreDirectory = false;
-
-            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            var fileDialog = new OpenFileDialog
             {
-                image = new BitmapImage();
-                image.BeginInit();
-                image.UriSource = new Uri(dlg.FileName);
-                image.EndInit();
-                NotProcessedImageHeight.Text = image.PixelHeight.ToString() + "px";
-                NotProcessedImageWidth.Text = image.PixelWidth.ToString() + "px";
-                NotProcessedImage.Source = image;
-            }
+                InitialDirectory = "c:\\",
+                Filter = @"Image files (*.jpg)|*.jpg|All Files (*.*)|*.*",
+                RestoreDirectory = false
+            };
+
+            if (fileDialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+
+            _image = new BitmapImage();
+            _image.BeginInit();
+            _image.UriSource = new Uri(fileDialog.FileName);
+            _image.EndInit();
+
+            ImageHeight.Text = _image.PixelHeight.ToString() + " px";
+            ImageWidth.Text = _image.PixelWidth.ToString() + " px";
+            ImageSize.Text = new System.IO.FileInfo(fileDialog.FileName).Length.ToString() + " bytes";
+
+            Image.Source = _image;
         }
+
+        private void RemoveImage(object sender, RoutedEventArgs e)
+        {
+            Image.Source = null;
+            ImageHeight.Text = "0 px";
+            ImageWidth.Text = "0 px";
+            ImageSize.Text = "0 bytes";
+        }
+
         public void CreateShadesWithMultipleThreads(string path, int threadsNumber, string pathToSaveData, string headerLine = "X,Y,R,G,B,A")
         {
-            Stopwatch sw = new Stopwatch();
+            var sw = new Stopwatch();
             sw.Start();
 
-            Bitmap img = new Bitmap(path);
+            var img = new Bitmap(path);
             var strBuilder = new StringBuilder();
             strBuilder.AppendLine(headerLine);
-            ConcurrentDictionary<string, int> shades = new ConcurrentDictionary<string, int>();
+            var shades = new ConcurrentDictionary<string, int>();
 
-            int widthJump = img.Width / threadsNumber;
-            int heightJump = img.Height / threadsNumber;
+            var widthJump = img.Width / threadsNumber;
+            var heightJump = img.Height / threadsNumber;
 
-            int moduloWidth = img.Width % threadsNumber;
-            int moduloHeight = img.Height % threadsNumber;
+            var moduloWidth = img.Width % threadsNumber;
+            var moduloHeight = img.Height % threadsNumber;
 
-            int[] widthBreakpoints = new int[threadsNumber+1];
-            int[] heightBreakpoints = new int[threadsNumber+1];
+            var widthBreakpoints = new int[threadsNumber+1];
+            var heightBreakpoints = new int[threadsNumber+1];
             widthBreakpoints[0] = 0;
             heightBreakpoints[0] = 0;
 
-            for (int i = 2; i < threadsNumber+2; i++)
+            for (var i = 2; i < threadsNumber+2; i++)
             {
                 widthBreakpoints[i - 1] = widthJump*(i-1);
                 heightBreakpoints[i - 1] = heightJump *(i-1);
@@ -159,26 +171,22 @@ namespace ImageProcessing
                 index =>
                 {
                     
-                    int widthStartIndex = widthBreakpoints[index];
-                    int heightStartIndex = heightBreakpoints[index];
-                    int widthLimit = widthBreakpoints[index+1];
-                    int heightLimit = heightBreakpoints[index+1];
+                    var widthStartIndex = widthBreakpoints[index];
+                    var heightStartIndex = heightBreakpoints[index];
+                    var widthLimit = widthBreakpoints[index+1];
+                    var heightLimit = heightBreakpoints[index+1];
 
-                    for (int i = widthStartIndex; i < widthLimit; i++)
+                    for (var i = widthStartIndex; i < widthLimit; i++)
                     {
-                        for (int j = heightStartIndex; j < heightLimit; j++)
+                        for (var j = heightStartIndex; j < heightLimit; j++)
                         {
                             System.Drawing.Color pixel;
                             lock (img)
                             {
                                 pixel = img.GetPixel(i, j);
                             }
-                            strBuilder.AppendLine(String.Format("{0}, {1}, {2}, {3}, {4}, {5}", 
-                                i, j,
-                                pixel.R.ToString(), 
-                                pixel.G.ToString(), 
-                                pixel.B.ToString(), 
-                                pixel.A.ToString()));
+                            strBuilder.AppendLine(
+                                $"{i}, {j}, {pixel.R.ToString()}, {pixel.G.ToString()}, {pixel.B.ToString()}, {pixel.A.ToString()}");
 
                             string color = $"{pixel.R.ToString()}, {pixel.G.ToString()}, {pixel.B.ToString()}";
                             if (shades.ContainsKey(color))
@@ -203,37 +211,28 @@ namespace ImageProcessing
             }
 
             var countsStrBuilder = new StringBuilder();
-            countsStrBuilder.AppendLine("RGB COUNTS");
-            countsStrBuilder.AppendLine("R, G, B, Counts");
+            countsStrBuilder.AppendLine("R, G, B, Count");
             PrintShades(shades, countsStrBuilder);
 
             sw.Stop();
-            countsStrBuilder.AppendLine("Total time, Number of threads");
-            countsStrBuilder.AppendLine(String.Format("{0}, {1}", sw.Elapsed + "s", threadsNumber.ToString()));
-            lastSavedImageTime = sw.Elapsed.ToString();
+            countsStrBuilder.AppendLine("Time, Threads");
+            countsStrBuilder.AppendLine($"{sw.Elapsed + "s"}, {threadsNumber.ToString()}");
+            _time = sw.Elapsed.ToString();
 
-            if (pathToSaveData != null)
-            {
-                SaveCsv(pathToSaveData, countsStrBuilder, "rgba.csv");
-            }
-            else
-            {
-                SaveCsv(path, countsStrBuilder, "rgba.csv");
-            }
-
+            SaveCsv(pathToSaveData ?? path, countsStrBuilder, "rgba_data.csv");
         }
 
         public void PrintShades(ConcurrentDictionary<string, int> shades, StringBuilder stringBuilder)
         {
             foreach (var el in shades)
             {
-                stringBuilder.AppendLine(String.Format("{0}, {1}", el.Key, el.Value));
+                stringBuilder.AppendLine($"{el.Key}, {el.Value}");
             }
         }
 
         public void SaveCsv(string path, StringBuilder strBuilder, string fileName = "data.csv")
         {
-            string pathToSave = Directory.GetParent(path).FullName + "\\" + fileName;
+            var pathToSave = Directory.GetParent(path).FullName + "\\" + fileName;
 
             if (File.Exists(pathToSave))
             {
@@ -245,29 +244,25 @@ namespace ImageProcessing
 
         private async void ManageProcessing(string path)
         {
-            SaveToCsvTime.Text = "...";
+            //SaveToCsvTime.Text = "...";
             CurrentState.Text = "is loading...";
-
-            string threadsNumberText = ThreadsNumber.Text;
 
             await Task.Run(() =>
             {
-                int threadsNumber;
-                if (int.TryParse(threadsNumberText, out threadsNumber))
-                {
-                    CreateShadesWithMultipleThreads(path, threadsNumber, null);
-                }
-                else
-                {
-                    CreateShadesWithMultipleThreads(path, 1, null);
-                }
+                CreateShadesWithMultipleThreads(path,
+                     ThreadsNumber, null);
 
                 Dispatcher.Invoke(() =>
                 {
-                    CurrentState.Text = "finished in " + lastSavedImageTime;
+                    CurrentState.Text = "Time: " + _time;
                 });
             });
             
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }
