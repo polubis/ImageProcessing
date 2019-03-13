@@ -173,14 +173,12 @@ namespace ImageProcessing
                             {
                                 pixel = img.GetPixel(i, j);
                             }
-
-                            strBuilder.Append(i);
-                            strBuilder.Append(j);
-                            strBuilder.Append(pixel.R.ToString());
-                            strBuilder.Append(pixel.G.ToString());
-                            strBuilder.Append(pixel.B.ToString());
-                            strBuilder.Append(pixel.A.ToString());
-                            strBuilder.AppendLine();
+                            strBuilder.AppendLine(String.Format("{0}, {1}, {2}, {3}, {4}, {5}", 
+                                i, j,
+                                pixel.R.ToString(), 
+                                pixel.G.ToString(), 
+                                pixel.B.ToString(), 
+                                pixel.A.ToString()));
 
                             string color = $"{pixel.R.ToString()}, {pixel.G.ToString()}, {pixel.B.ToString()}";
                             if (shades.ContainsKey(color))
